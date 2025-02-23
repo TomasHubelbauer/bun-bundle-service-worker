@@ -1,5 +1,7 @@
 # Bun bundle service worker
 
+Run using `bun --hot index.ts`.
+
 Bun now has an HTML bundler and I wonder if it is possible and easy to set up a
 bundle where there is an HTML entry point with its script bundle and another
 bundle for a service worker giving the web app offline capabilities:
@@ -60,6 +62,10 @@ bundling the service worker entry point dynamically which is great news for me:
 
 https://bun.sh/docs/bundler
 
-Next steps:
+In the last step of this experiment, I added service worker logic for catching
+requests that go to `/api/` and responding to them with a made up response
+instead of letting them go to the server.
 
-https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Tutorials/js13kGames/Offline_Service_workers
+This is the basic building block to then add caching logic to be able to serve
+the application shell when offline as well as add offline-based API proxy for
+providing data for endpoints whose data is cached in `caches` or IndexedDB.
