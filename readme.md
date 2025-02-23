@@ -59,3 +59,7 @@ This will allowe me to avoid using `Bun.build` in the `fetch` handler and
 bundling the service worker entry point dynamically which is great news for me:
 
 https://bun.sh/docs/bundler
+
+Next steps:
+
+https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Tutorials/js13kGames/Offline_Service_workers
