@@ -69,3 +69,33 @@ instead of letting them go to the server.
 This is the basic building block to then add caching logic to be able to serve
 the application shell when offline as well as add offline-based API proxy for
 providing data for endpoints whose data is cached in `caches` or IndexedDB.
+
+## Debugging service workers in Firefox
+
+Viewing the `console.log` calls and attaching a debugger to the service worker
+script can be done like so:
+
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Find the service worker for the web app by looking for
+   `http://localhost:3000/chunk-$hash$.js` (see web app `console.log` for URL)
+3. Click Inspect next to that entry and use the Console and Debuger tabs
+4. Keep repeating this whenever the worker script (and thus hash) changes as the
+   Inspect tab will keep disconnecting
+
+## `postMessage`
+
+The main web application tab and the service worker can communicate via the
+`postMessage` web API which can be useful for logging seeing the pain it is as
+described in the above section, but also possible for offline status indication.
+
+I'm running into an error when calling `postMessage` from the service worker
+which I think is because there is some song and dance in terms of the connection
+setup.
+
+From what I remember, Broadcast Channel and Message channel are an alternative:
+https://web.dev/articles/two-way-communication-guide
+
+## Offline testing
+
+Kill the Bun script, do not use the Offline Network throttle in Firefox, the
+service worker will not be hit when offline otherwise.
