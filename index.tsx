@@ -28,12 +28,20 @@ statusSpan.textContent = navigator.onLine ? 'online' : 'offline';
 
 const demoButton = document.querySelector<HTMLButtonElement>('#demoButton');
 if (!demoButton) {
-  throw new Error('Demo button not found');
+  throw new Error('#demoButton not found');
+}
+
+const demoUl = document.querySelector<HTMLUListElement>('#demoUl');
+if (!demoUl) {
+  throw new Error('#demoUl not found');
 }
 
 demoButton.disabled = false;
 demoButton.addEventListener('click', async () => {
   const response = await fetch('/api/test');
   const text = await response.text();
-  demoButton.textContent = text;
+
+  const li = document.createElement('li');
+  li.textContent = `${new Date().toISOString()}: ${text}`;
+  demoUl.prepend(li);
 });
