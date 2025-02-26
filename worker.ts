@@ -28,36 +28,33 @@ self.addEventListener('fetch', async (event) => {
 
   console.log(`Proxying call to ${path}`);
 
-  const cache = await caches.open('bun-bundle-service-worker');
-  const keys = await cache.keys();
-
-  // Clear out prior bundle chunks upon encountering the current one
-  if (/^\/chunk-\w{8}\.js$/.test(path)) {
-    for (const key of keys) {
-      const keyUrl = new URL(key.url);
-      const keyPath = keyUrl.href.slice(keyUrl.origin.length);
-      if (keyPath === path || !/^\/chunk-\w{8}\.js/.test(keyPath)) {
-        continue;
-      }
-
-      console.log(`Deleting prior bundle chunk ${keyPath}`);
-      await cache.delete(key);
-    }
-  }
-
-  const paths = [...await cache.keys()]
-    .map((key) => new URL(key.url).href.slice(url.origin.length))
-    .sort()
-    ;
-
-  console.log('Holding cached paths', ...paths);
-
-  const isApiRequest = path.startsWith('/api/');
-
-  // Note that this logic needs to be in an IIFE to avoid this error:
-  // > InvalidStateError: "An attempt was made to use an object that is not, or is no longer, usable"
-  // Be aware that this is probably spec-correct behavior but it is annoying
+  // Note that `fetch` must call `respondWith` synchronously so all asynchronous work goes into the callback
   event.respondWith((async () => {
+    const cache = await caches.open('bun-bundle-service-worker');
+    const keys = await cache.keys();
+  
+    // Clear out prior bundle chunks upon encountering the current one
+    if (/^\/chunk-\w{8}\.js$/.test(path)) {
+      for (const key of keys) {
+        const keyUrl = new URL(key.url);
+        const keyPath = keyUrl.href.slice(keyUrl.origin.length);
+        if (keyPath === path || !/^\/chunk-\w{8}\.js/.test(keyPath)) {
+          continue;
+        }
+  
+        console.log(`Deleting prior bundle chunk ${keyPath}`);
+        await cache.delete(key);
+      }
+    }
+  
+    const paths = [...await cache.keys()]
+      .map((key) => new URL(key.url).href.slice(url.origin.length))
+      .sort()
+      ;
+  
+    console.log('Holding cached paths', ...paths);
+  
+    const isApiRequest = path.startsWith('/api/');
     try {
       const response = await fetch(event.request);
 
@@ -86,9 +83,10 @@ self.addEventListener('fetch', async (event) => {
         // TODO: Use IndexedDB to serve reads and queue writes when offline
         console.log(`Handling offline API call to ${path}`);
 
-        // TODO: Figure out why this doesn't work in the browser
-        return new Response(`Hello from the service worker! ${path}`, {
-          headers: { 'x-service-worker': 'true' },
+        return new Response('Hello, world!', {
+          headers: {
+            'x-service-worker': 'true'
+          },
         });
       } 
   

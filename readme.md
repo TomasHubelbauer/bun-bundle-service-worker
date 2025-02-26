@@ -98,4 +98,7 @@ https://web.dev/articles/two-way-communication-guide
 ## Offline testing
 
 Kill the Bun script, do not use the Offline Network throttle in Firefox, the
-service worker will not be hit when offline otherwise.
+service worker will not be hit when in the Firefox offline mode.
+
+Also note that toggling Offline in the Network tab of the developer tools won't
+raise the `offline` / `online` events of `document`.
