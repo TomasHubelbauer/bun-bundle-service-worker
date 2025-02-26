@@ -14,21 +14,43 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', async (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) {
-    console.log(`Ignoring request to different origin ${url.origin}`);
+    console.log(`Skipping call to separate host ${url.host}`);
     return;
   }
 
   const path = url.href.slice(url.origin.length);
-  console.log(`Proxying request to ${path}`);
 
-  const cache = await caches.open('bun-bundle-service-worker');
-  console.group('Cache opened, keys:');
-  for (const key of await cache.keys()) {
-    const url = new URL(key.url);
-    console.log(url.href.slice(url.origin.length));
+  // Do not cache the worker script itself
+  if (path === '/worker') {
+    console.log(`Ignoring call to worker bundle ${path}`);
+    return;
   }
 
-  console.groupEnd();
+  console.log(`Proxying call to ${path}`);
+
+  const cache = await caches.open('bun-bundle-service-worker');
+  const keys = await cache.keys();
+
+  // Clear out prior bundle chunks upon encountering the current one
+  if (/^\/chunk-\w{8}\.js$/.test(path)) {
+    for (const key of keys) {
+      const keyUrl = new URL(key.url);
+      const keyPath = keyUrl.href.slice(keyUrl.origin.length);
+      if (keyPath === path || !/^\/chunk-\w{8}\.js/.test(keyPath)) {
+        continue;
+      }
+
+      console.log(`Deleting prior bundle chunk ${keyPath}`);
+      await cache.delete(key);
+    }
+  }
+
+  const paths = [...await cache.keys()]
+    .map((key) => new URL(key.url).href.slice(url.origin.length))
+    .sort()
+    ;
+
+  console.log('Holding cached paths', ...paths);
 
   const isApiRequest = path.startsWith('/api/');
 
@@ -42,14 +64,15 @@ self.addEventListener('fetch', async (event) => {
       if (isApiRequest) {
         // TODO: Refresh the IndexedDB data in case of a mutation so it matches
         // the live data the moment the web application goes offline
-        console.log(`Handling online request to ${path}`);
+        console.log(`Handling online API call to ${path}`);
       }
       else {
+        console.log(`Fetching fresh response to ${path}`);
         console.log(`Caching fresh response to ${path}`);
         cache.put(event.request, response.clone());
       }
   
-      console.log(`Forwarding fresh response to ${path}`);
+      console.log(`Returning fresh response to ${path}`);
       return response;
     }
     catch (error) {
@@ -61,18 +84,22 @@ self.addEventListener('fetch', async (event) => {
       // Handle API URLs differently - use IndexedDB to do offline CRUD operations
       if (isApiRequest) {
         // TODO: Use IndexedDB to serve reads and queue writes when offline
-        console.log(`Handling offline request to ${path}`);
+        console.log(`Handling offline API call to ${path}`);
 
         // TODO: Figure out why this doesn't work in the browser
-        return new Response(`Hello from the service worker! ${path}`);
+        return new Response(`Hello from the service worker! ${path}`, {
+          headers: { 'x-service-worker': 'true' },
+        });
       } 
   
-      console.log(`Obtaining state response to ${path}`);
+      console.log(`Obtaining cached response to ${path}`);
       const response = await cache.match(event.request);
       if (!response) {
-        console.log(`Failing cache matching of ${path}`);
+        console.log(`Failing cache lookup of ${path}`);
+        return;
       }
   
+      console.log(`Returning stale response to ${path}`);
       return response;
     }
   })());

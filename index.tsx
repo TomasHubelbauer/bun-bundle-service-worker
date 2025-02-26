@@ -40,8 +40,9 @@ demoButton.disabled = false;
 demoButton.addEventListener('click', async () => {
   const response = await fetch('/api/test');
   const text = await response.text();
+  const source = response.headers.get('x-service-worker') ? 'service worker' : 'web server';
 
   const li = document.createElement('li');
-  li.textContent = `${new Date().toISOString()}: ${text}`;
+  li.textContent = `${new Date().toISOString()}: ${text} (${source})`;
   demoUl.prepend(li);
 });
