@@ -33,7 +33,7 @@ self.addEventListener('fetch', async (event) => {
     const cache = await caches.open('bun-bundle-service-worker');
     const keys = await cache.keys();
   
-    // Clear out prior bundle chunks upon encountering the current one
+    // Clear out prior JS bundle chunks upon encountering the current one
     if (/^\/chunk-\w{8}\.js$/.test(path)) {
       for (const key of keys) {
         const keyUrl = new URL(key.url);
@@ -42,7 +42,21 @@ self.addEventListener('fetch', async (event) => {
           continue;
         }
   
-        console.log(`Deleting prior bundle chunk ${keyPath}`);
+        console.log(`Deleting prior JS bundle chunk ${keyPath}`);
+        await cache.delete(key);
+      }
+    }
+
+    // Clear out prior CSS bundle chunks upon encountering the current one
+    if (/^\/chunk-\w{8}\.css$/.test(path)) {
+      for (const key of keys) {
+        const keyUrl = new URL(key.url);
+        const keyPath = keyUrl.href.slice(keyUrl.origin.length);
+        if (keyPath === path || !/^\/chunk-\w{8}\.css/.test(keyPath)) {
+          continue;
+        }
+  
+        console.log(`Deleting prior CSS bundle chunk ${keyPath}`);
         await cache.delete(key);
       }
     }
