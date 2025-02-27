@@ -9,7 +9,7 @@ Bun.serve({
   },
   fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname === '/status') {
+    if (url.pathname === '/api/status') {
       return new Response(
         async function* () {
           while (!request.signal.aborted) {

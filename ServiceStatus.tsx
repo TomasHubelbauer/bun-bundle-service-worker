@@ -6,8 +6,7 @@ export default function ServiceStatus() {
 
   useEffect(() => {
     const abortController = new AbortController();
-    const eventSource = new EventSource('/status');
-
+    const eventSource = new EventSource('/api/status');
     eventSource.addEventListener('open', () => setStatus('online'), { signal: abortController.signal });
     eventSource.addEventListener('message', () => setStatus('online'), { signal: abortController.signal });
     eventSource.addEventListener('error', () => setStatus('offline'), { signal: abortController.signal });

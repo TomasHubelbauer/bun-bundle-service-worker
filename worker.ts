@@ -26,6 +26,11 @@ self.addEventListener('fetch', async (event) => {
     return;
   }
 
+  // Do not handle the SSE status API call in the service worker
+  if (path === '/api/status') {
+    return;
+  }
+
   console.log(`Proxying call to ${path}`);
 
   // Note that `fetch` must call `respondWith` synchronously so all asynchronous work goes into the callback
