@@ -13,6 +13,10 @@ export default function ServiceStatus() {
     eventSource.addEventListener('error', () => setStatus('offline'), { signal: abortController.signal });
     eventSource.addEventListener('close', () => setStatus('offline'), { signal: abortController.signal });
 
+    // Note that this `close` prevents console errors when refreshing the tab
+    // and is different from the one in the cleanup function of the effect.
+    window.addEventListener('beforeunload', () => eventSource.close());
+
     return () => {
       eventSource.close();
       abortController.abort();
