@@ -1,7 +1,0 @@
-#NetworkStatus span[data-status="online"] {
-  color: green;
-}
-
-#NetworkStatus span[data-status="offline"] {
-  color: red;
-}

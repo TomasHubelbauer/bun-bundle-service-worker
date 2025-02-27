@@ -6,9 +6,16 @@ import './App.css';
 
 export default function App() {
   return (
-    <div>
-      <NetworkStatus />
-      <ServiceStatus />
+    <div className='my-2 w-[80ch] mx-auto flex flex-col gap-[1ch]'>
+      <div className='flex items-center gap-[1ch]'>
+        <span className='text-xl'>👷</span>
+        <span className='font-bold'>{document.title}</span>
+      </div>
+      <div className='flex gap-[1ch] text-slate-500'>
+        <NetworkStatus />
+        ·
+        <ServiceStatus />
+      </div>
       <Demo />
     </div>
   );

@@ -1,7 +1,0 @@
-#ServiceStatus span[data-status="online"] {
-  color: green;
-}
-
-#ServiceStatus span[data-status="offline"] {
-  color: red;
-}

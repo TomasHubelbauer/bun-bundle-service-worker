@@ -22,23 +22,25 @@ export default function Demo() {
   }, []);
 
   return (
-    <div>
-      <button onClick={handleDemoButtonClick}>Hit service worker</button>
+    <>
+      <button onClick={handleDemoButtonClick} className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'>
+        Hit service worker
+      </button>
       <ul>
         {results.map(result => (
           <li key={result.id}>
-            {result.stamp}:
+            <time dateTime={result.stamp} className='text-slate-500'>{result.stamp}:</time>
             {' '}
             {'error' in result
               ? result.error
               : (
                 <>
-                  {result.result} ({result.source})
+                  {result.result} <span className='text-slate-500'>({result.source})</span>
                 </>
               )}
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }
