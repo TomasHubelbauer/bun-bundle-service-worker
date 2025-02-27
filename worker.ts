@@ -8,6 +8,36 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
+self.addEventListener('message', async (event) => {
+  console.log(`Processing service worker message:`, event.data);
+  switch (event.data.type) {
+    case 'list-cache-urls': {
+      await reportCacheKeys();
+      break;
+    }
+    case 'delete-cache-url': {
+      const cache = await caches.open('bun-bundle-service-worker');
+      await cache.delete(event.data.url);
+      await reportCacheKeys();
+      break;
+    }
+    default: {
+      throw new Error(`Unknown message type: ${event.data.type}`);
+    }
+  }
+});
+
+async function reportCacheKeys() {
+  const cache = await caches.open('bun-bundle-service-worker');
+  const urls = [...await cache.keys()].map(key => key.url);
+  const clients = await self.clients.matchAll();
+  for (const client of clients) {
+    client.postMessage({ type: 'cache-urls', urls });
+  }
+
+  console.log('Reporting cache keys to all clients');
+}
+
 // View the `console.log` calls here in about:debugging#/runtime/this-firefox by
 // going to the Inspect window of the service worker with the URL printed in the
 // developer tools Console of the web application
@@ -72,6 +102,9 @@ self.addEventListener('fetch', async (event) => {
       ;
   
     console.log('Holding cached paths', ...paths);
+
+    // Reported updated cache keys following the possible purges
+    await reportCacheKeys();
   
     const isApiRequest = path.startsWith('/api/');
     try {

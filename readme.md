@@ -84,16 +84,8 @@ script can be done like so:
 
 ## `postMessage`
 
-The main web application tab and the service worker can communicate via the
-`postMessage` web API which can be useful for logging seeing the pain it is as
-described in the above section, but also possible for offline status indication.
-
-I'm running into an error when calling `postMessage` from the service worker
-which I think is because there is some song and dance in terms of the connection
-setup.
-
-From what I remember, Broadcast Channel and Message channel are an alternative:
-https://web.dev/articles/two-way-communication-guide
+This repository includes a demonstration of two-way communication between the
+service worker and the tab being controlled by it.
 
 ## Offline testing
 

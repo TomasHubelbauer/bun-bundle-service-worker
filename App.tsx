@@ -2,6 +2,7 @@ import React from 'react';
 import NetworkStatus from './NetworkStatus';
 import ServiceStatus from './ServiceStatus';
 import Demo from './Demo';
+import Cache from './Cache';
 import './App.css';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <ServiceStatus />
       </div>
       <Demo />
+      <Cache />
     </div>
   );
 }

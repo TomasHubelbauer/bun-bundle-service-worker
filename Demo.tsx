@@ -26,7 +26,13 @@ export default function Demo() {
       <button onClick={handleDemoButtonClick} className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'>
         Hit service worker
       </button>
+      <div className='font-bold'>Demo</div>
       <ul>
+        {!results.length && (
+          <div className='text-slate-500'>
+            Hit the button with the service online and offline to see the difference.
+          </div>
+        )}
         {results.map(result => (
           <li key={result.id}>
             <time dateTime={result.stamp} className='text-slate-500'>{result.stamp}:</time>
