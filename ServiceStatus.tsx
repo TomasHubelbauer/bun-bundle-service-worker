@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Status from './Status';
 
 export default function ServiceStatus() {
   const [status, setStatus] = useState<'online' | 'offline'>('offline');
@@ -23,7 +24,7 @@ export default function ServiceStatus() {
 
   return (
     <div id="ServiceStatus">
-      Service <span className={status === 'online' ? 'text-green-500' : 'text-red-500'}>{status}</span>
+      Service: <Status status={status} />
     </div>
   );
 }

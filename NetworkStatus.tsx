@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Status from './Status';
 
 export default function NetworkStatus() {
   const [status, setStatus] = useState<'online' | 'offline'>('offline');
@@ -13,7 +14,7 @@ export default function NetworkStatus() {
 
   return (
     <div id="NetworkStatus">
-      Network <span className={status === 'online' ? 'text-green-500' : 'text-red-500'}>{status}</span>
+      Network: <Status status={status} />
     </div>
   );
 }
