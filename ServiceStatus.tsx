@@ -23,8 +23,8 @@ export default function ServiceStatus() {
   }, []);
 
   return (
-    <div id="ServiceStatus">
-      Service: <Status status={status} />
+    <div className='text-slate-500'>
+      Service <Status status={status} />
     </div>
   );
 }

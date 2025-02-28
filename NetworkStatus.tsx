@@ -13,8 +13,8 @@ export default function NetworkStatus() {
   }, []);
 
   return (
-    <div id="NetworkStatus">
-      Network: <Status status={status} />
+    <div className='text-slate-500'>
+      Network <Status status={status} />
     </div>
   );
 }
