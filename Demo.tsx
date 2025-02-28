@@ -21,18 +21,25 @@ export default function Demo() {
     }
   }, []);
 
+  const handleClearButtonClick = useCallback(() => {
+    setResults([]);
+  }, []);
+
   return (
     <>
-      <button onClick={handleDemoButtonClick} className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'>
-        Hit service worker
-      </button>
       <div className='font-bold'>Demo</div>
+      <button
+        onClick={handleDemoButtonClick}
+        className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'
+      >
+        Demo
+      </button>
+      {!results.length && (
+        <div className='text-slate-500'>
+          Hit the button with the service online and offline to see the difference.
+        </div>
+      )}
       <ul>
-        {!results.length && (
-          <div className='text-slate-500'>
-            Hit the button with the service online and offline to see the difference.
-          </div>
-        )}
         {results.map(result => (
           <li key={result.id}>
             <time dateTime={result.stamp} className='text-slate-500'>{result.stamp}:</time>
@@ -47,6 +54,14 @@ export default function Demo() {
           </li>
         ))}
       </ul>
+      {!!results.length && (
+        <button
+          onClick={handleClearButtonClick}
+          className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'
+        >
+          Clear
+        </button>
+      )}
     </>
   );
 }
