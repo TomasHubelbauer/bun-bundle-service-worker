@@ -3,8 +3,6 @@ if (!('serviceWorker' in navigator)) {
 }
 
 const registration = await navigator.serviceWorker.register('/worker');
-console.log(`Service worker ${registration.active?.state ?? 'failed'}`);
-
 if (!registration.active) {
   throw new Error('Service worker not activated');
 }
