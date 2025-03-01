@@ -1,4 +1,6 @@
 import React, { useCallback, useState } from 'react';
+import Title from './Title';
+import Button from './Button';
 
 type BaseResult = { id: number; stamp: string; };
 type SuccessResult = BaseResult & { result: string; source: 'service-worker' | 'web-server'; };
@@ -27,13 +29,13 @@ export default function Demo() {
 
   return (
     <>
-      <div className='font-bold'>Demo</div>
-      <button
-        onClick={handleDemoButtonClick}
-        className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'
-      >
-        Demo
-      </button>
+      <Title text='Demo' />
+      <div className='flex gap-1'>
+        <Button text='Demo' onClick={handleDemoButtonClick} />
+        {!!results.length && (
+          <Button text='Clear' onClick={handleClearButtonClick} danger />
+        )}
+      </div>
       {!results.length && (
         <div className='text-slate-500'>
           Hit the button with the service online and offline to see the difference.
@@ -54,14 +56,6 @@ export default function Demo() {
           </li>
         ))}
       </ul>
-      {!!results.length && (
-        <button
-          onClick={handleClearButtonClick}
-          className='cursor-pointer mr-auto px-4 border-1 rounded hover:bg-slate-100'
-        >
-          Clear
-        </button>
-      )}
     </>
   );
 }

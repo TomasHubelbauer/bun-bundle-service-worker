@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState, MouseEvent, useRef } from 'react';
+import React, { useCallback, useEffect, useState, MouseEvent } from 'react';
+import Title from './Title';
+import Button from './Button';
 
 export default function Cache() {
   const [urls, setUrls] = useState<URL[]>([]);
@@ -51,7 +53,7 @@ export default function Cache() {
 
   return (
     <>
-      <div className='font-bold'>Cache</div>
+      <Title text='Cache' />
       {!urls.length && (
         <div className='text-slate-500'>No cached paths.</div>
       )}
@@ -59,13 +61,7 @@ export default function Cache() {
         {urls.map((url) => (
           <div key={url.href} className='flex justify-between hover:bg-slate-100'>
             <code>{url.pathname}</code>
-            <button
-              className='cursor-pointer px-4 border-1 rounded hover:bg-red-100 bg-white'
-              data-url={url}
-              onClick={handlePurgeButtonClick}
-            >
-              Purge
-            </button>
+            <Button text='Purge' onClick={handlePurgeButtonClick} danger data-url={url} />
           </div>
         ))}
       </div>
