@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import Status from './Status';
 
 export default function WorkerStatus() {
-  const [status, setStatus] = useState<ServiceWorkerState | 'error'>();
+  const [status, setStatus] = useState<ServiceWorkerState | 'error'>('error');
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -23,11 +24,7 @@ export default function WorkerStatus() {
 
   return (
     <div className='text-slate-500'>
-      Worker{' '}
-      <span className={status === 'activated' ? 'text-green-500' : 'text-red-500'}>
-        {status}
-        <span className={`w-2 h-2 inline-block rounded ml-1 ${status === 'activated' ? 'bg-green-500' : 'bg-red-500'}`} />
-      </span>
+      Worker <Status text={status} colorName={status === 'activated' ? 'green' : 'red'} />
     </div>
   );
 }

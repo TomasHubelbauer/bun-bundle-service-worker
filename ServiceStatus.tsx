@@ -24,7 +24,7 @@ export default function ServiceStatus() {
 
   return (
     <div className='text-slate-500'>
-      Service <Status status={status} />
+      Service <Status text={status} colorName={status === 'online' ? 'green' : 'red'} />
     </div>
   );
 }

@@ -14,7 +14,7 @@ export default function NetworkStatus() {
 
   return (
     <div className='text-slate-500'>
-      Network <Status status={status} />
+      Network <Status text={status} colorName={status === 'online' ? 'green' : 'red'} />
     </div>
   );
 }
