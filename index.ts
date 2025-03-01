@@ -3,30 +3,25 @@ import index from './index.html';
 import worker from './worker.html';
 
 Bun.serve({
-  static: {
+  routes: {
+    '/*': new Response(null, { status: 404 }),
     '/': index,
     '/worker': worker,
-  },
-  fetch(request) {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/status') {
-      return new Response(
-        async function* () {
-          while (!request.signal.aborted) {
-            yield `data: ${new Date().toISOString()}\n\n`;
-            await Bun.sleep(1000);
-          }
-        },
-        {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-          }
+    '/api/test': new Response('Hello, world!'),
+    '/api/status': request => new Response(
+      async function* () {
+        while (!request.signal.aborted) {
+          yield `data: ${new Date().toISOString()}\n\n`;
+          await Bun.sleep(1000);
         }
-      );
-    }
-
-    return new Response('Hello, world!');
-  }
+      },
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      }
+    )
+  },
 });
