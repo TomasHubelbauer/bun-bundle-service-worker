@@ -38,6 +38,40 @@ async function reportCacheKeys() {
   console.log('Reporting cache keys to all clients');
 }
 
+const JS_BUNDLE_REGEX = /^\/_bun\/client\/index-\w{16}.js$/;
+async function evictPriorJsBundles(path: string) {
+  const cache = await caches.open('bun-bundle-service-worker');
+  const keys = await cache.keys();
+
+  for (const key of keys) {
+    const keyUrl = new URL(key.url);
+    const keyPath = keyUrl.href.slice(keyUrl.origin.length);
+    if (keyPath === path || !JS_BUNDLE_REGEX.test(keyPath)) {
+      continue;
+    }
+
+    console.log(`Deleting prior JS bundle chunk ${keyPath}`);
+    await cache.delete(key);
+  }
+}
+
+const CSS_BUNDLE_REGEX = /^\/_bun\/asset\/\w{16}.css$/;
+async function evictPriorCssBundles(path: string) {
+  const cache = await caches.open('bun-bundle-service-worker');
+  const keys = await cache.keys();
+
+  for (const key of keys) {
+    const keyUrl = new URL(key.url);
+    const keyPath = keyUrl.href.slice(keyUrl.origin.length);
+    if (keyPath === path || !CSS_BUNDLE_REGEX.test(keyPath)) {
+      continue;
+    }
+
+    console.log(`Deleting prior CSS bundle chunk ${keyPath}`);
+    await cache.delete(key);
+  }
+}
+
 // View the `console.log` calls here in about:debugging#/runtime/this-firefox by
 // going to the Inspect window of the service worker with the URL printed in the
 // developer tools Console of the web application
@@ -50,8 +84,8 @@ self.addEventListener('fetch', async (event) => {
 
   const path = url.href.slice(url.origin.length);
 
-  // Do not cache the worker script itself
-  if (path === '/worker') {
+  // Do not cache the worker page or script themselves
+  if (path === '/worker' || path.startsWith('/_bun/client/worker-')) {
     console.log(`Ignoring call to worker bundle ${path}`);
     return;
   }
@@ -65,37 +99,17 @@ self.addEventListener('fetch', async (event) => {
 
   // Note that `fetch` must call `respondWith` synchronously so all asynchronous work goes into the callback
   event.respondWith((async () => {
-    const cache = await caches.open('bun-bundle-service-worker');
-    const keys = await cache.keys();
-  
     // Clear out prior JS bundle chunks upon encountering the current one
-    if (/^\/chunk-\w{8}\.js$/.test(path)) {
-      for (const key of keys) {
-        const keyUrl = new URL(key.url);
-        const keyPath = keyUrl.href.slice(keyUrl.origin.length);
-        if (keyPath === path || !/^\/chunk-\w{8}\.js/.test(keyPath)) {
-          continue;
-        }
-  
-        console.log(`Deleting prior JS bundle chunk ${keyPath}`);
-        await cache.delete(key);
-      }
+    if (JS_BUNDLE_REGEX.test(path)) {
+      await evictPriorJsBundles(path);
     }
 
     // Clear out prior CSS bundle chunks upon encountering the current one
     if (/^\/chunk-\w{8}\.css$/.test(path)) {
-      for (const key of keys) {
-        const keyUrl = new URL(key.url);
-        const keyPath = keyUrl.href.slice(keyUrl.origin.length);
-        if (keyPath === path || !/^\/chunk-\w{8}\.css/.test(keyPath)) {
-          continue;
-        }
-  
-        console.log(`Deleting prior CSS bundle chunk ${keyPath}`);
-        await cache.delete(key);
-      }
+      await evictPriorCssBundles(path);
     }
   
+    const cache = await caches.open('bun-bundle-service-worker');
     const paths = [...await cache.keys()]
       .map((key) => new URL(key.url).href.slice(url.origin.length))
       .sort()

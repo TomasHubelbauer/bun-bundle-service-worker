@@ -2,73 +2,48 @@
 
 Run using `bun --hot index.ts`.
 
-Bun now has an HTML bundler and I wonder if it is possible and easy to set up a
-bundle where there is an HTML entry point with its script bundle and another
-bundle for a service worker giving the web app offline capabilities:
+## Backstory
 
+As of 2.1, Bun now has a bundler built-in:
+https://bun.sh/blog/bun-v1.2#bun-is-a-javascript-bundler
+
+I wondered if it was possible to (ab)use it for service workers.
+
+Introduction to service workers:
 https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers
 
-The service worker needs to live at a different route from the main bundle file
-which might prove a challenge, we'll see.
+Service workers have their own entry point which is historically a challenge for
+bundlers and as a result teams would leave the service worker script with worse
+DX than the rest of the code base.
 
-But we should get free TypeScript even in the service worker file which is not
-a common DX.
+With Bun's bundler the promise was that we could use it to bundle the worker
+script to its own bundle with all of the processing them main bundle gets.
 
-The challenge is figuring out how to make the worker bundle.
-The worker file is referenced via a URL in the main bundle when calling the
-`navigator.serviceWorker.register` method.
+The challenge was figuring out how to make the worker bundle be distinct from
+the main one so we could pass its URL as an entry point to the `register` method
+on `navigator.serviceWorker`.
 
-That's not a site Bun scans for bundling.
+What I tried:
 
-We can't link it as another `script` in the main HTML file, because it would
-attempt to execute it.
+- Linking it as another `script` element in the entry point HTML file, which
+  resulted in it becoming a part of the main bundle
+- Changing the `script`'s `type` to `text/plain` to see if Bun transpiles it but
+  doesn't include it in the main bundle, which it still did
+- Using a `preload` `link` thinking it might transpile but not bundle, but Bun
+  removed the `link` without including the script in the main bundle or anywhere
+- Importing the worker script in `index.ts` but resulted in the script executing
+- Importing `worker.ts` with `{ type: 'text' }` but that did not transpile it
+- Exposing the `worker.html` import via `routes` but `HTMLBundle` is not a valid
+  substitute for the `Response` object so this resulted in an error
 
-`<script src="worker.ts" type="text/plain"></script>`
+As of Bun 1.2 I settled on having `worker.html` link `worker.ts` and dynamically
+loading `worker.html` and parsing out the `worker.ts` bundle URL to use in the
+`register` method and this worked.
 
-I thought we might get away with using a `script` tag after all, but setting its
-`type` to `text/plain` or something like that, so that the browser does not
-attempt to execute it, but Bun bundles all the `script` tags into one bundle.
-
-Then I thought we might get away with using a `preload` `link` unless `link`
-processing is limited to CSS in Bun:
-
-https://bun.sh/docs/bundler/fullstack#how-this-works
-
-`<link rel="preload" href="worker.ts" as="script" />`
-
-Turns out the `preload` `link` was picked up by Bun, but the script did not
-become a part of the bundle and the `link` was removed.
-
-I also messed with `import worker from './worker.ts'` and
-`import worker from './worker.ts' with { type: 'text' };` and exposing these
-as a named `static` route, but this suffered with Bun attempting to execute
-the script and Bun requiring the import to be `HTMLBundle | Response`
-respectively, neither worked.
-
-Next I tried adding another HTML entry point with a linked worker script so it
-gets an addressable URL which I could then get by using `fetch` on the worker
-HTML entry point and parsing out the `script` to get at its `src`.
-
-This worked!
-It is clunky, but it worked.
-
-In the future I could try to improve it by using a `data:` URL for the worker
-HTML file once Bun supports those:
-
-https://github.com/oven-sh/bun/issues/6851
-
-This will allowe me to avoid using `Bun.build` in the `fetch` handler and
-bundling the service worker entry point dynamically which is great news for me:
-
-https://bun.sh/docs/bundler
-
-In the last step of this experiment, I added service worker logic for catching
-requests that go to `/api/` and responding to them with a made up response
-instead of letting them go to the server.
-
-This is the basic building block to then add caching logic to be able to serve
-the application shell when offline as well as add offline-based API proxy for
-providing data for endpoints whose data is cached in `caches` or IndexedDB.
+As if Bun 1.2.3, hot module reloading was introduced (seemingly with no toggle)
+and this started adding React and Bun scaffolding to the worker script, breaking
+it, so I had to pivot to using `Bun.build` explicitly and exposing in `routes`,
+which also works.
 
 ## Debugging service workers in Firefox
 
@@ -77,12 +52,17 @@ script can be done like so:
 
 1. Go to `about:debugging#/runtime/this-firefox`
 2. Find the service worker for the web app by looking for
-   `http://localhost:3000/chunk-$hash$.js` (see web app `console.log` for URL)
+   `http://localhost:3000//_bun/client/index-${hash}.js`
 3. Click Inspect next to that entry and use the Console and Debuger tabs
 4. Keep repeating this whenever the worker script (and thus hash) changes as the
    Inspect tab will keep disconnecting
 
-## `postMessage`
+## `Cache` management
+
+I had to add logic to the service worker to evict old JS and CSS bundles because
+the bundle name includes its hash and it was filling up the `Cache`.
+
+## `postMessage` demonstration
 
 This repository includes a demonstration of two-way communication between the
 service worker and the tab being controlled by it.
@@ -94,3 +74,19 @@ service worker will not be hit when in the Firefox offline mode.
 
 Also note that toggling Offline in the Network tab of the developer tools won't
 raise the `offline` / `online` events of `document`.
+
+## Offline HMR web socket
+
+The bundle packs in a web socket establishement code for HMR support as of Bun
+1.2.3 and when the bundle is running off the service worker cache and the server
+is not running, the WS won't be able to connect, but it will keep retrying,
+spamming the console.
+
+I filed as issue for this:
+https://github.com/oven-sh/bun/issues/17839
+
+We can't solve this by responding to the `_bun/hmr` call in the service worker,
+because we do not have a way to respond that wouldn't cause the web socket
+establishment attempt to crash and retry.
+We'd have to run a no-op web socket server in the service worker to achieve
+silencing the errors.

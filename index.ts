@@ -1,12 +1,19 @@
 import Bun from 'bun';
 import index from './index.html';
-import worker from './worker.html';
 
 Bun.serve({
+  development: true,
   routes: {
     '/*': new Response(null, { status: 404 }),
     '/': index,
-    '/worker': worker,
+    '/worker': async () => {
+      const build = await Bun.build({ entrypoints: ['worker.ts'] });
+      if (!build.success || build.logs.length || build.outputs.length !== 1) {
+        throw new Error('Build failed' + (build.logs ? ':\n' + build.logs.join('\n') : ''));
+      }
+
+      return new Response(await build.outputs[0].text(), { headers: { 'Content-Type': 'application/javascript' } });
+    },
     '/api/test': new Response('Hello, world!'),
     '/api/status': request => new Response(
       async function* () {
