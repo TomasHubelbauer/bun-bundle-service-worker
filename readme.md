@@ -2,6 +2,9 @@
 
 Run using `bun --hot index.ts`.
 
+- `--hot` takes care of the BE hot reloading (changes to `index.ts` and imports)
+- Bun's HMR takes care of the FE hot reloading (changes to React components)
+
 ## Backstory
 
 As of 2.1, Bun now has a bundler built-in:
