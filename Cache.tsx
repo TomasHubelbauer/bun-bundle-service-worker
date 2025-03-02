@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState, MouseEvent } from 'react';
 import Title from './Title';
 import Button from './Button';
+import trimUrl from './trimUrl';
 
 export default function Cache() {
   const [urls, setUrls] = useState<URL[]>([]);
@@ -60,7 +61,7 @@ export default function Cache() {
       <div className='flex flex-col gap-1'>
         {urls.map((url) => (
           <div key={url.href} className='flex justify-between hover:bg-slate-100'>
-            <code>{url.pathname}</code>
+            <code>{trimUrl(url)}</code>
             <Button text='Purge' onClick={handlePurgeButtonClick} danger data-url={url} />
           </div>
         ))}
