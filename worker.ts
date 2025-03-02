@@ -1,3 +1,5 @@
+import IndexedDbStorage from './IndexedDbStorage';
+
 self.addEventListener('install', (event) => {
   // Do not wait for tab close and reopen to use the updated service worker file
   self.skipWaiting();
@@ -19,6 +21,23 @@ self.addEventListener('message', async (event) => {
       const cache = await caches.open('bun-bundle-service-worker');
       await cache.delete(event.data.url);
       await reportCacheKeys();
+      break;
+    }
+    case 'view-queue': {
+      const clients = await self.clients.matchAll();
+      const items: { index: number; method: string; url: string; data: string; }[] = [];
+      for (let index = 0; index < queue.length; index++) {
+        const item = queue[index];
+
+        // TODO: Make `'await item.clone().text()'` work here - gets stuck
+        const data = '';
+        items.push({ index, method: item.method, url: item.url, data });
+      }
+
+      for (const client of clients) {
+        client.postMessage({ type: 'queue', queue: items });
+      }
+
       break;
     }
     default: {
@@ -72,6 +91,21 @@ async function evictPriorCssBundles(path: string) {
   }
 }
 
+// Note that service workers do not support TLA so we can't call `migrate` here
+const storage = new IndexedDbStorage();
+const headers = new Headers({
+  'x-service-worker': 'true'
+});
+
+// TODO: Hold this in a table in the IndexedDB storage for persistence
+const queue: Request[] = [];
+
+function getApiPath(apiRequest: Request) {
+  const url = new URL(apiRequest.url);
+  const path = url.href.slice(url.origin.length);
+  return apiRequest.method + ' ' + path.replace(/\d/, '#');
+}
+
 // View the `console.log` calls here in about:debugging#/runtime/this-firefox by
 // going to the Inspect window of the service worker with the URL printed in the
 // developer tools Console of the web application
@@ -84,6 +118,11 @@ self.addEventListener('fetch', async (event) => {
 
   const path = url.href.slice(url.origin.length);
 
+  // Do not cache the Bun error report API
+  if (path === '/_bun/report_error') {
+    return;
+  }
+
   // Do not cache the worker page or script themselves
   if (path === '/worker' || path.startsWith('/_bun/client/worker-')) {
     console.log(`Ignoring call to worker bundle ${path}`);
@@ -95,7 +134,7 @@ self.addEventListener('fetch', async (event) => {
     return;
   }
 
-  console.log(`Proxying call to ${path}`);
+  console.log(`Proxying call to ${event.request.method} ${path}`);
 
   // Note that `fetch` must call `respondWith` synchronously so all asynchronous work goes into the callback
   event.respondWith((async () => {
@@ -120,14 +159,25 @@ self.addEventListener('fetch', async (event) => {
     // Reported updated cache keys following the possible purges
     await reportCacheKeys();
   
-    const isApiRequest = path.startsWith('/api/');
+    // Clone so we can access the body even after the `fetch` call
+    const apiRequest = path.startsWith('/api/') ? event.request.clone() : null;
     try {
       const response = await fetch(event.request);
 
-      if (isApiRequest) {
-        // TODO: Refresh the IndexedDB data in case of a mutation so it matches
-        // the live data the moment the web application goes offline
-        console.log(`Handling online API call to ${path}`);
+      if (apiRequest) {
+        const apiPath = getApiPath(apiRequest);
+
+        console.log(`Handling online API call to ${apiPath}`);
+        await storage.migrate();
+
+        switch (apiPath) {
+          case 'GET /api/items': {
+            console.log('Syncing online storage with offline storage')
+            const apiResponse = await response.clone();
+            await storage.reset(await apiResponse.json());
+            break;
+          }
+        }
       }
       else {
         console.log(`Fetching fresh response to ${path}`);
@@ -144,16 +194,45 @@ self.addEventListener('fetch', async (event) => {
         throw error;
       }
 
-      // Handle API URLs differently - use IndexedDB to do offline CRUD operations
-      if (isApiRequest) {
-        // TODO: Use IndexedDB to serve reads and queue writes when offline
-        console.log(`Handling offline API call to ${path}`);
+      if (apiRequest) {
+        const apiPath = getApiPath(apiRequest);
 
-        return new Response('Hello, world!', {
-          headers: {
-            'x-service-worker': 'true'
-          },
-        });
+        console.log(`Handling offline API call to ${apiPath}`);
+        await storage.migrate();
+
+        switch (apiPath) {
+          case 'GET /api/items': {
+            return new Response(JSON.stringify(await storage.getAll()), { headers });
+          }
+          case 'POST /api/items': {
+            queue.push(apiRequest);
+            await storage.add(await apiRequest.json());
+            return new Response(null, { headers });
+          }
+          case 'PUT /api/items/#': {
+            queue.push(apiRequest);
+            const url = new URL(apiRequest.url);
+            const id = +url.pathname.slice('/api/items/'.length);
+            await storage.update(id, await apiRequest.json());
+            return new Response(null, { headers });
+          }
+          case 'DELETE /api/items/#': {
+            queue.push(apiRequest);
+            const url = new URL(apiRequest.url);
+            const id = +url.pathname.slice('/api/items/'.length);
+            await storage.remove(id);
+            return new Response(null, { headers });
+          }
+          case 'DELETE /api/items': {
+            queue.push(apiRequest);
+            await storage.clear();
+            return new Response(null, { headers });
+          }
+          default: {
+            console.log('Failing to handle unknown API request');
+            throw new Error(`Unknown API request: ${apiPath}`);
+          }
+        }
       } 
   
       console.log(`Obtaining cached response to ${path}`);

@@ -15,21 +15,63 @@ type Call = {
   url: URL;
 } & Pick<Response, 'ok' | 'status' | 'statusText'>;
 
+const methodColors = {
+  POST: 'text-green-500',
+  PUT: 'text-blue-500',
+  DELETE: 'text-red-500',
+};
+
 export default function Demo() {
   const [items, setItems] = useState<Item[]>([]);
+  const [queue, setQueue] = useState<{ index: number; method: string; url: URL; data: string; }[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   
-  const trackCall = useCallback((response: Response) => {
+  const trackCall = useCallback(async (response: Response) => {
     const stamp = new Date().toISOString().slice(0, 'yyyy-mm-dd-hh-mm-ss'.length).replace('T', ' ');
     const { url, ok, status, statusText } = response;
     const source = response.headers.get('x-service-worker') ? 'service-worker' as const : 'web-server' as const;
     setCalls(calls => [{ id: calls.length, stamp, source, url: new URL(url), ok, status, statusText }, ...calls]);
+    await fetchQueue();
+  }, []);
+
+  const fetchQueue = useCallback(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration || !registration.active) {
+      throw new Error('Service worker not registered.');
+    }
+
+    registration.active.postMessage({ type: 'view-queue' });
+  }, []);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      switch (event.data.type) {
+        case 'queue': {
+          setQueue(event.data.queue.map(item => ({ ...item, url: new URL(item.url) })).reverse());
+          break;
+        }
+      }
+    }, { signal: abortController.signal });
+
+    void async function () {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration || !registration.active) {
+        throw new Error('Service worker not registered.');
+      }
+
+      registration.active.postMessage({ type: 'view-queue' });
+    }();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   const fetchItems = useCallback(async () => {
     const response = await fetch('/api/items');
     setItems(await response.json());
-    trackCall(response);
+    await trackCall(response);
   }, [trackCall]);
 
   useEffect(() => {
@@ -43,7 +85,7 @@ export default function Demo() {
     }
 
     const response = await fetch('/api/items', { method: 'POST', body: JSON.stringify({ name }) });
-    trackCall(response);
+    await trackCall(response);
     await fetchItems();
   }, []);
 
@@ -64,7 +106,7 @@ export default function Demo() {
     }
 
     const response = await fetch(`/api/items/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
-    trackCall(response);
+    await trackCall(response);
     await fetchItems();
   }, [items]);
 
@@ -84,7 +126,7 @@ export default function Demo() {
     }
 
     const response = await fetch(`/api/items/${id}`, { method: 'DELETE' });
-    trackCall(response);
+    await trackCall(response);
     await fetchItems();
   }, [items]);
 
@@ -94,7 +136,7 @@ export default function Demo() {
     }
 
     const response = await fetch('/api/items', { method: 'DELETE' });
-    trackCall(response);
+    await trackCall(response);
     await fetchItems();
   }, []);
 
@@ -103,6 +145,7 @@ export default function Demo() {
   }, []);
 
   const idDigits = useMemo(() => ~~Math.log10(Math.max(...items.map(item => item.id))) + 1, [items]);
+  const indexDigits = useMemo(() => ~~Math.log10(Math.max(...queue.map(item => item.index))) + 1, [queue]);
 
   return (
     <>
@@ -133,6 +176,34 @@ export default function Demo() {
         : (
           <div className='text-slate-500'>
             The database is empty.
+          </div>
+        )
+      }
+      <Title text='Queue' />
+      {queue.length
+        ? (
+          <div className='flex flex-col gap-1'>
+            {queue.map(item => (
+              <div key={item.index} className='flex gap-1 hover:bg-slate-100'>
+                <code className='text-slate-500'>
+                  {item.index.toString().padStart(indexDigits, '0')}
+                </code>
+                <code className={methodColors[item.method]}>
+                  {item.method}
+                </code>
+                <code>
+                  {trimUrl(item.url)}
+                </code>
+                <code>
+                  {item.data}
+                </code>
+              </div>
+            ))}
+          </div>
+        )
+        : (
+          <div className='text-slate-500'>
+            The queue of actions to synchronize with the database is empty.
           </div>
         )
       }

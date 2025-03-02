@@ -14,9 +14,6 @@ export default function Cache() {
           setUrls(event.data.urls.map(key => new URL(key)).sort());
           break;
         }
-        default: {
-          throw new Error(`Unknown message type: ${event.data.type}`);
-        }
       }
     }, { signal: abortController.signal });
 
