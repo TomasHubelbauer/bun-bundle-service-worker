@@ -57,7 +57,7 @@ export default function Cache() {
       )}
       <div className='flex flex-col gap-1'>
         {urls.map((url) => (
-          <div key={url.href} className='flex justify-between hover:bg-slate-100'>
+          <div key={url.href} className='flex justify-between items-center hover:bg-slate-100'>
             <code>{trimUrl(url)}</code>
             <Button text='Purge' onClick={handlePurgeButtonClick} danger data-url={url} />
           </div>

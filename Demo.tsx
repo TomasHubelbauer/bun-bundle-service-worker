@@ -158,7 +158,7 @@ export default function Demo() {
           <div>
             <div className='flex flex-col gap-1 mb-1'>
               {items.map(item => (
-                <div key={item.id} className='flex gap-1 hover:bg-slate-100'>
+                <div key={item.id} className='flex gap-1 items-center hover:bg-slate-100'>
                   <code className='text-slate-500'>
                     {item.id.toString().padStart(idDigits, '0')}
                   </code>
