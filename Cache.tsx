@@ -40,7 +40,7 @@ export default function Cache() {
       throw new Error('Path not found.');
     }
 
-    if (!confirm(`Are you sure you want to purge ${url}?`)) {
+    if (!confirm(`Are you sure you want to purge ${trimUrl(new URL(url))}?`)) {
       return;
     }
 
