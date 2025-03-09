@@ -1,11 +1,12 @@
 {
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@tailwindcss/browser": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4"
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
   }
 }
